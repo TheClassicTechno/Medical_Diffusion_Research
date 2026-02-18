@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Conda / envs
+miniconda3/
+conda_envs/
+.env
+
+# Model checkpoints and weights (large)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.onnx
+pretrained/
+
+# Training / run outputs
+runs_*/
+**/runs_*/
+pred_samples/
+**/pred_samples/
+checkpoints/
+**/checkpoints/
+*.log
+*.log.*
+wandb/
+lightning_logs/
+
+# Week 7: keep small JSONs, ignore big checkpoints (already covered by *.pt)
+# scripts/week7_results/*.pt is ignored via *.pt
+
+# Data (don’t commit raw imaging by default)
+pre/
+post/
+week7_subject_masks/
+# Uncomment if masks or data live in repo and are large:
+# Masks/
+# *.nii.gz
+
+# Regional eval outputs (optional: they’re regenerable; uncomment to ignore)
+# scripts/regional_week7_*.json
+
+# Temp and cache
+*.tmp
+*.temp
+.cache/
+.DS_Store
+*.bak
+*~
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Local pip
+.local_py/
+
+# Markdown and text (docs, notes, logs)
+*.md
+*.txt
+
+# JSON and PNG
+*.json
+*.png
+
+# Spreadsheets and MATLAB
+*.mat
+*.numbers
+*.xlsx
+
+# Large or sensitive
+*.nii
+*.nii.gz
+# Remove the two lines above if you want to track small NIfTI configs

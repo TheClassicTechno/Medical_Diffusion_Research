@@ -1,0 +1,105 @@
+# Copy-paste each block in order (from /data1/julih). Chronological: data/setup → first models → 3D → tables → regional → repo.
+
+# --- 1 (earliest: data & split) ---
+git add scripts/combined_subject_split.py scripts/data_2020_single_delay.py
+git commit -m "Data: combined subject split and 2020 single-delay"
+
+# --- 2 ---
+git add scripts/week7_preprocess.py scripts/week7_data.py
+git commit -m "Week 7: preprocess and data pipeline"
+
+# --- 3 (first 2D diffusion) ---
+git add Diffusion_baseline/diffusion_model.py
+git commit -m "2D DDPM baseline (Week 7)"
+
+# --- 4 ---
+git add Diffusion_ColdDiffusion/model.py Diffusion_ResidualDiffusion/model.py
+git commit -m "2D Cold and Residual diffusion (Week 7)"
+
+# --- 5 ---
+git add Diffusion_Option1/model.py Diffusion_Option2/model.py
+git commit -m "2D diffusion Option1 and Option2 (Week 7)"
+
+# --- 6 (script trainers) ---
+git add scripts/week7_train_unet2d.py scripts/week7_train_unet3d.py
+git commit -m "Week 7: UNet 2D and 3D script trainers"
+
+# --- 7 ---
+git add scripts/week7_train_resnet3d.py scripts/week7_train_foundation_3d.py
+git commit -m "Week 7: ResNet 3D and Foundation 3D script trainers"
+
+# --- 8 (3D diffusion: baseline) ---
+git add Diffusion_baseline_3D/diffusion_model_3d.py Diffusion_baseline_3D/diffusion_model_3d_with_tips.py
+git commit -m "3D DDPM baseline and tips (Week 7)"
+
+# --- 9 ---
+git add Diffusion_baseline_3D/save_one_week7_pred_nifti.py
+git commit -m "3D DDPM: Week 7 NIfTI export"
+
+# --- 10 ---
+git add Diffusion_ColdDiffusion_3D/model_3d.py Diffusion_ColdDiffusion_3D/model_3d_with_tips.py
+git commit -m "3D Cold diffusion (Week 7 / Phase 2)"
+
+# --- 11 ---
+git add Diffusion_ResidualDiffusion_3D/model_3d.py Diffusion_ResidualDiffusion_3D/model_3d_with_tips.py
+git commit -m "3D Residual diffusion main and tips (Week 7 / Phase 2)"
+
+# --- 12 ---
+git add Diffusion_3D_PatchVolume/patch_volume_vae.py Diffusion_3D_PatchVolume/patch_diffusion_model.py Diffusion_3D_PatchVolume/train_patch_diffusion.py
+git commit -m "3D Patch/Volume VAE and diffusion (Week 7)"
+
+# --- 13 ---
+git add Hybrid_UNet_Diffusion/unet_diffusion_hybrid.py
+git commit -m "Hybrid UNet+Diffusion 3D (Week 7 / Phase 2)"
+
+# --- 14 ---
+git add Diffusion_3D_Latent/week7_loader.py Diffusion_3D_Latent/cold_diffusion_latent.py Diffusion_3D_Latent/train_cold_diffusion_latent_week7.py Diffusion_3D_Latent/evaluate_cold_diffusion.py
+git commit -m "3D latent diffusion: loader, model, Week 7 train and eval"
+
+# --- 15 ---
+git add Diffusion_MAISI/diffusion_3d_conditional_train.py
+git commit -m "MAISI 3D diffusion (Week 7 / Phase 2)"
+
+# --- 16 ---
+git add UNet_3D/model_3d.py
+git commit -m "UNet 3D standalone (Week 7 / Phase 2/3)"
+
+# --- 17 (FNO 3D) ---
+git add NeuralOperators/fno_3d_cvr.py NeuralOperators/fno_3d_finetune_slice_brain.py
+git commit -m "FNO 3D CVR and finetune (Week 7)"
+
+# --- 18 ---
+git add NeuralOperators/fno_3d_cvr_spectral.py NeuralOperators/train_fno_3d_spectral_week7.py
+git commit -m "FNO 3D spectral and Week 7 train"
+
+# --- 19 (third-party) ---
+git add third_party_foundation_3d/run_med3dvlm_week7_cvr.py third_party_foundation_3d/run_sam_med3d_week7.py third_party_foundation_3d/run_sam_med3d_week7_test_set.py third_party_foundation_3d/run_stunet_week7_test_set.py
+git commit -m "Third-party: Med3DVLM, SAM-Med3D, STUNet Week 7"
+
+# --- 20 ---
+git add third_party_foundation_3d/build_week7_3d_comparison.py
+git commit -m "Third-party: Week 7 3D comparison table script"
+
+# --- 21 (table building) ---
+git add scripts/build_final_week7_table.py scripts/update_week7_table_from_results.py
+git commit -m "Week 7: Phase 1 table build and update"
+
+# --- 22 ---
+git add scripts/build_week7_phase2_phase3_table.py
+git commit -m "Week 7: Phase 2/3 table build"
+
+# --- 23 (regional & masks) ---
+git add scripts/generate_week7_subject_masks.py
+git commit -m "Week 7: generate subject masks for Phase 3"
+
+# --- 24 ---
+git add scripts/regional_eval_3d.py scripts/week7_regional_eval.py
+git commit -m "Week 7: regional eval (vascular/territory and per-region)"
+
+# --- 25 (misc) ---
+git add scripts/verify_volume_integrity.py scripts/print_combined_metrics.py scripts/ensemble_fno_diffusion_3d.py
+git commit -m "Scripts: volume verify, combined metrics, FNO ensemble"
+
+# --- 26 (last: repo) ---
+git add .gitignore COMMIT_PYTHON_FILES GIT_COMMIT_COMMANDS
+git commit -m "Repo: gitignore and commit file lists"

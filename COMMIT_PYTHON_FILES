@@ -1,0 +1,63 @@
+# Relevant Python files to commit (Jan–now: Week 7 pipeline, Phase 2/3, regional eval, tables)
+# These are the ones that implement or drive the progress. Add with: git add <path>
+# (Your .gitignore does not ignore .py, so all .py are tracked unless in an ignored dir.)
+
+# ---- scripts/ (core Week 7) ----
+scripts/week7_preprocess.py
+scripts/week7_data.py
+scripts/week7_train_unet2d.py
+scripts/week7_train_unet3d.py
+scripts/week7_train_resnet3d.py
+scripts/week7_train_foundation_3d.py
+scripts/week7_regional_eval.py
+scripts/generate_week7_subject_masks.py
+scripts/regional_eval_3d.py
+scripts/build_final_week7_table.py
+scripts/build_week7_phase2_phase3_table.py
+scripts/update_week7_table_from_results.py
+scripts/combined_subject_split.py
+scripts/data_2020_single_delay.py
+scripts/verify_volume_integrity.py
+scripts/print_combined_metrics.py
+scripts/ensemble_fno_diffusion_3d.py
+
+# ---- Diffusion (2D) Week 7 / Phase 2 ----
+Diffusion_baseline/diffusion_model.py
+Diffusion_ColdDiffusion/model.py
+Diffusion_ResidualDiffusion/model.py
+Diffusion_Option1/model.py
+Diffusion_Option2/model.py
+
+# ---- Diffusion (3D) Week 7 / Phase 2 ----
+Diffusion_baseline_3D/diffusion_model_3d.py
+Diffusion_baseline_3D/diffusion_model_3d_with_tips.py
+Diffusion_baseline_3D/save_one_week7_pred_nifti.py
+Diffusion_ColdDiffusion_3D/model_3d.py
+Diffusion_ColdDiffusion_3D/model_3d_with_tips.py
+Diffusion_ResidualDiffusion_3D/model_3d.py
+Diffusion_ResidualDiffusion_3D/model_3d_with_tips.py
+Diffusion_3D_PatchVolume/train_patch_diffusion.py
+Diffusion_3D_PatchVolume/patch_volume_vae.py
+Diffusion_3D_PatchVolume/patch_diffusion_model.py
+Hybrid_UNet_Diffusion/unet_diffusion_hybrid.py
+Diffusion_3D_Latent/train_cold_diffusion_latent_week7.py
+Diffusion_3D_Latent/week7_loader.py
+Diffusion_3D_Latent/cold_diffusion_latent.py
+Diffusion_3D_Latent/evaluate_cold_diffusion.py
+Diffusion_MAISI/diffusion_3d_conditional_train.py
+
+# ---- UNet 3D ----
+UNet_3D/model_3d.py
+
+# ---- NeuralOperators (FNO 3D) ----
+NeuralOperators/fno_3d_cvr.py
+NeuralOperators/fno_3d_cvr_spectral.py
+NeuralOperators/fno_3d_finetune_slice_brain.py
+NeuralOperators/train_fno_3d_spectral_week7.py
+
+# ---- Third-party / foundation 3D ----
+third_party_foundation_3d/run_med3dvlm_week7_cvr.py
+third_party_foundation_3d/build_week7_3d_comparison.py
+third_party_foundation_3d/run_sam_med3d_week7.py
+third_party_foundation_3d/run_sam_med3d_week7_test_set.py
+third_party_foundation_3d/run_stunet_week7_test_set.py
