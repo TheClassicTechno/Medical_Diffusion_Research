@@ -26,7 +26,7 @@ OUT_DIR = os.path.join(DATA_DIR, "scripts", "week7_results")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-SEED = 42
+SEED = int(os.environ.get("SEED", 42))
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
