@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Minimal "foundation-style" 3D trainer for Week7 pre→post (from opensourcemodels.txt).
+Minimal "foundation-style" 3D trainer for Week7 pre->post (from opensourcemodels.txt).
 Uses a small 3D CNN backbone; can be swapped for Triad/Med3DVLM/STU-Net encoder once installed.
 Same data pipeline as week7_train_unet3d: get_week7_splits(), Week7VolumePairs3D, 96x112x96 pad.
 Saves scripts/week7_results/week7_foundation3d_best.pt and week7_foundation3d_results.json.
@@ -37,7 +37,7 @@ LR = 1e-3
 
 
 class Small3DCNN(nn.Module):
-    """Small 3D CNN for pre→post (foundation-style backbone; replace with Triad/Med3DVLM encoder if desired)."""
+    """Small 3D CNN for pre->post (foundation-style backbone; replace with Triad/Med3DVLM encoder if desired)."""
 
     def __init__(self, in_ch=1, out_ch=1, base=32):
         super().__init__()
