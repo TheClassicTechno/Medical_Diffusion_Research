@@ -21,7 +21,7 @@ def get_metrics(path):
     return t.get("mae_mean"), t.get("ssim_mean"), t.get("psnr_mean")
 
 def main():
-    print("Combined results (paste into §1 table; run after training finishes):\n")
+    print("Combined results (paste into Section 1 table; run after training finishes):\n")
     for name, path in FILES:
         if not os.path.isfile(path):
             print(f"{name}: (file not yet created) {path}")
