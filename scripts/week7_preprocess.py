@@ -47,6 +47,37 @@ def get_brain_bounding_box(mask: Optional[np.ndarray] = None) -> Tuple[slice, sl
     return slice(d_min, d_max), slice(h_min, h_max), slice(w_min, w_max)
 
 
+def get_brain_crop_shape(mask: Optional[np.ndarray] = None) -> Tuple[int, int, int]:
+    """Shape of the brain-only crop (same for all subjects when using fixed MNI mask). Returns (D, H, W)."""
+    sl_d, sl_h, sl_w = get_brain_bounding_box(mask)
+    return (sl_d.stop - sl_d.start, sl_h.stop - sl_h.start, sl_w.stop - sl_w.start)
+
+
+def load_volume_cropped(
+    nii_path: str,
+    target_shape: Tuple[int, int, int] = TARGET_SHAPE,
+    apply_mask: bool = True,
+    pad_to_shape: Optional[Tuple[int, int, int]] = None,
+    minmax: bool = True,
+) -> np.ndarray:
+    """
+    Load NIfTI, resize to target_shape, apply brain mask, crop to brain bbox, optionally pad to pad_to_shape.
+    Returns float32 array of shape pad_to_shape if given, else get_brain_crop_shape().
+    Use for brain-only crop experiment: smaller volume, same preprocessing otherwise.
+    """
+    vol = load_volume(nii_path, target_shape=target_shape, apply_mask=apply_mask, pad_zeros=True, minmax=minmax)
+    # Bbox from MNI mask (same shape as TARGET_SHAPE)
+    sl_d, sl_h, sl_w = get_brain_bounding_box(get_brain_mask())
+    cropped = vol[sl_d, sl_h, sl_w].copy()
+    if pad_to_shape is not None:
+        out = np.zeros(pad_to_shape, dtype=np.float32)
+        cd, ch, cw = cropped.shape
+        pd, ph, pw = pad_to_shape
+        out[:min(cd, pd), :min(ch, ph), :min(cw, pw)] = cropped[:min(cd, pd), :min(ch, ph), :min(cw, pw)]
+        return out
+    return cropped
+
+
 def load_volume(
     nii_path: str,
     target_shape: Tuple[int, int, int] = TARGET_SHAPE,

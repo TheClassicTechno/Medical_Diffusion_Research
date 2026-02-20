@@ -22,9 +22,12 @@ import nibabel as nib
 
 from week7_preprocess import (
     load_volume,
+    load_volume_cropped,
     augment_volume,
     get_pre_post_pairs,
     get_brain_mask_for_shape,
+    get_brain_bounding_box,
+    get_brain_mask,
     TARGET_SHAPE,
 )
 
@@ -64,6 +67,38 @@ class Week7VolumePairs3D(Dataset):
             pre = augment_volume(pre, flip_lr=fl, flip_ud=fu, flip_fb=ff, intensity_scale=scale)
             post = augment_volume(post, flip_lr=fl, flip_ud=fu, flip_fb=ff, intensity_scale=scale)
         pre_t = torch.from_numpy(pre).unsqueeze(0).float()   # (1, H, W, D)
+        post_t = torch.from_numpy(post).unsqueeze(0).float()
+        return pre_t, post_t
+
+
+class Week7VolumePairs3DCropped(Dataset):
+    """3D dataset with brain-only crop: load 91x109x91, apply mask, crop to bbox, pad to crop_pad_shape.
+    Same split and augmentations as Week7VolumePairs3D. For controlled crop experiment vs full-volume."""
+
+    def __init__(
+        self,
+        pairs: List[Tuple[str, str]],
+        augment: bool = False,
+        target_shape: Tuple[int, int, int] = TARGET_SHAPE,
+        crop_pad_shape: Tuple[int, int, int] = (72, 88, 72),
+    ):
+        self.pairs = list(pairs)
+        self.augment = augment
+        self.target_shape = target_shape
+        self.crop_pad_shape = crop_pad_shape
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, idx):
+        pre_path, post_path = self.pairs[idx]
+        pre = load_volume_cropped(pre_path, target_shape=self.target_shape, pad_to_shape=self.crop_pad_shape)
+        post = load_volume_cropped(post_path, target_shape=self.target_shape, pad_to_shape=self.crop_pad_shape)
+        if self.augment:
+            fl, fu, ff, scale = _random_augment()
+            pre = augment_volume(pre, flip_lr=fl, flip_ud=fu, flip_fb=ff, intensity_scale=scale)
+            post = augment_volume(post, flip_lr=fl, flip_ud=fu, flip_fb=ff, intensity_scale=scale)
+        pre_t = torch.from_numpy(pre).unsqueeze(0).float()
         post_t = torch.from_numpy(post).unsqueeze(0).float()
         return pre_t, post_t
 
