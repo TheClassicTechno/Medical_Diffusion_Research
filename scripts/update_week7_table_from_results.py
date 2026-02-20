@@ -22,9 +22,9 @@ def load_metrics(path):
     if mae is None and ssim is None and psnr is None:
         return None
     return (
-        f"{mae:.4f}" if mae is not None else "—",
-        f"{ssim:.4f}" if ssim is not None else "—",
-        f"{psnr:.2f}" if psnr is not None else "—",
+        f"{mae:.4f}" if mae is not None else "-",
+        f"{ssim:.4f}" if ssim is not None else "-",
+        f"{psnr:.2f}" if psnr is not None else "-",
     )
 
 

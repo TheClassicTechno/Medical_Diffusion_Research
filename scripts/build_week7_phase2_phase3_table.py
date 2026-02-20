@@ -9,7 +9,7 @@ import json
 ROOT = "/data1/julih"
 TABLE_PATH = os.path.join(ROOT, "WEEK7_TABLE_PHASE2_PHASE3.md")
 
-# (path, display_name, "2D" | "3D") — Phase 2 and/or Phase 3 result paths only
+# (path, display_name, "2D" | "3D") - Phase 2 and/or Phase 3 result paths only
 PHASE2_PHASE3_RESULT_FILES = [
     # 2D
     (os.path.join(ROOT, "scripts/week7_results/week7_unet2d_phase2_results.json"), "UNet", "2D"),
@@ -49,9 +49,9 @@ def load_metrics(path):
     if mae is None and ssim is None and psnr is None:
         return None
     return (
-        f"{mae:.4f}" if mae is not None else "—",
-        f"{ssim:.4f}" if ssim is not None else "—",
-        f"{psnr:.2f}" if psnr is not None else "—",
+        f"{mae:.4f}" if mae is not None else "-",
+        f"{ssim:.4f}" if ssim is not None else "-",
+        f"{psnr:.2f}" if psnr is not None else "-",
     )
 
 
@@ -60,13 +60,13 @@ def main():
     for path, name, typ in PHASE2_PHASE3_RESULT_FILES:
         m = load_metrics(path)
         if m is None:
-            rows.append((name, typ, "—", "—", "—", "Pending"))
+            rows.append((name, typ, "-", "-", "-", "Pending"))
             continue
         mae_s, ssim_s, psnr_s = m
         rows.append((name, typ, mae_s, ssim_s, psnr_s, "Done"))
 
     lines = [
-        "# Week 7 — Phase 2 / Phase 3 results (separate from Phase 1)",
+        "# Week 7 - Phase 2 / Phase 3 results (separate from Phase 1)",
         "",
         "Metrics from runs with **region-weighted loss (Phase 2)** and, for 3D script trainers, **subject-specific mask-weighted loss (Phase 3)**.",
         "Phase 1 (brain-only eval) table remains in **WEEK7_TABLE_RESULTS.md**.",

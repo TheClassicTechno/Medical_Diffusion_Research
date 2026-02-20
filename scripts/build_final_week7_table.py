@@ -10,7 +10,7 @@ import re
 ROOT = "/data1/julih"
 TABLE_PATH = os.path.join(ROOT, "WEEK7_TABLE_RESULTS.md")
 
-# (path, display_name, "2D" | "3D") — order: 2D first, then 3D
+# (path, display_name, "2D" | "3D") - order: 2D first, then 3D
 RESULT_FILES = [
     # 2D
     (os.path.join(ROOT, "scripts/week7_results/week7_unet2d_results.json"), "UNet", "2D"),
@@ -50,9 +50,9 @@ def load_metrics(path):
     if mae is None and ssim is None and psnr is None:
         return None
     return (
-        f"{mae:.4f}" if mae is not None else "—",
-        f"{ssim:.4f}" if ssim is not None else "—",
-        f"{psnr:.2f}" if psnr is not None else "—",
+        f"{mae:.4f}" if mae is not None else "-",
+        f"{ssim:.4f}" if ssim is not None else "-",
+        f"{psnr:.2f}" if psnr is not None else "-",
     )
 
 
@@ -76,8 +76,8 @@ def main():
     for i, (name, typ, mae_s, ssim_s, psnr_s) in enumerate(rows, 1):
         table_lines.append(f"| {i} | **{name}** | {typ} | **{mae_s}** | **{ssim_s}** | **{psnr_s}** | Done (Week7) |")
     table_lines.append("")
-    table_lines.append("- **Done:** Trained and evaluated with the Week7 pipeline (91×109×91, brain mask, combined 2020–2023, same augmentations). Results in `scripts/week7_results/` and project-specific JSONs.")
-    table_lines.append("- **Pending (same config):** DDPM Option1/Option2 2D, MAISI / other 3D — add result JSON path to `scripts/build_final_week7_table.py` when available.")
+    table_lines.append("- **Done:** Trained and evaluated with the Week7 pipeline (91x109x91, brain mask, combined 2020-2023, same augmentations). Results in `scripts/week7_results/` and project-specific JSONs.")
+    table_lines.append("- **Pending (same config):** DDPM Option1/Option2 2D, MAISI / other 3D - add result JSON path to `scripts/build_final_week7_table.py` when available.")
     table_lines.append("")
     table_lines.append("---")
     table_lines.append("")
