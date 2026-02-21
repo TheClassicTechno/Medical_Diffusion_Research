@@ -341,7 +341,7 @@ def main():
         'stride': 12 if use_week7 else 16,  # 50% overlap
         'batch_size': 16,  # Patches are smaller, can use larger batch
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 1337,  # Same as 2D paper for fair comparison
+        'seed': int(os.environ.get('SEED', 1337)),  # Week8: use SEED env for 3-seed runs
         
         # VAE config
         'latent_channels': 4,

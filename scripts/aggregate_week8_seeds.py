@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Aggregate Week 8 multi-seed results into mean ± std for tables.
+Aggregate Week 8 multi-seed results into mean +/- std for tables.
 
 Expects: per-seed result JSONs with keys mae_mean, ssim_mean, psnr_mean.
   - Either one dir per model with files like results_seed42.json, results_seed123.json, results_seed456.json
@@ -10,7 +10,7 @@ Usage:
   python scripts/aggregate_week8_seeds.py --results_dir /path/to/results --output table_week8.md
   python scripts/aggregate_week8_seeds.py --results_dir /data1/julih --pattern "*_seed*.json" --output week8_aggregate.csv
 
-Output: Table (Markdown or CSV) with columns Model, MAE (mean±std), SSIM (mean±std), PSNR (mean±std).
+Output: Table (Markdown or CSV) with columns Model, MAE (mean+/-std), SSIM (mean+/-std), PSNR (mean+/-std).
 """
 
 import argparse
@@ -88,7 +88,7 @@ def mean_std(vals: list[float]) -> tuple[float, float]:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Aggregate Week 8 seed results to mean ± std")
+    ap = argparse.ArgumentParser(description="Aggregate Week 8 seed results to mean +/- std")
     ap.add_argument("--results_dir", default="/data1/julih", help="Root dir to search for *_seed*.json")
     ap.add_argument("--pattern", default="*_seed*.json", help="Glob for result files")
     ap.add_argument("--output", default="", help="Output path (e.g. week8_table.md or .csv)")
@@ -128,9 +128,9 @@ def main():
         })
 
     # Print to stdout
-    print("Model\tMAE (mean±std)\tSSIM (mean±std)\tPSNR (mean±std)\tn_seeds")
+    print("Model\tMAE (mean+/-std)\tSSIM (mean+/-std)\tPSNR (mean+/-std)\tn_seeds")
     for r in rows:
-        print(f"{r['model']}\t{r['mae_mean']:.4f} ± {r['mae_std']:.4f}\t{r['ssim_mean']:.4f} ± {r['ssim_std']:.4f}\t{r['psnr_mean']:.2f} ± {r['psnr_std']:.2f}\t{r['n_seeds']}")
+        print(f"{r['model']}\t{r['mae_mean']:.4f} +/- {r['mae_std']:.4f}\t{r['ssim_mean']:.4f} +/- {r['ssim_std']:.4f}\t{r['psnr_mean']:.2f} +/- {r['psnr_std']:.2f}\t{r['n_seeds']}")
 
     if args.output:
         out_path = Path(args.output)
@@ -142,10 +142,10 @@ def main():
                     f.write(f"{r['model']},{r['n_seeds']},{r['mae_mean']:.6f},{r['mae_std']:.6f},{r['ssim_mean']:.6f},{r['ssim_std']:.6f},{r['psnr_mean']:.4f},{r['psnr_std']:.4f}\n")
         else:
             with open(out_path, "w") as f:
-                f.write("| Model | MAE (mean ± std) | SSIM (mean ± std) | PSNR (mean ± std) | n_seeds |\n")
+                f.write("| Model | MAE (mean +/- std) | SSIM (mean +/- std) | PSNR (mean +/- std) | n_seeds |\n")
                 f.write("|-------|------------------|-------------------|-------------------|--------|\n")
                 for r in rows:
-                    f.write(f"| {r['model']} | {r['mae_mean']:.4f} ± {r['mae_std']:.4f} | {r['ssim_mean']:.4f} ± {r['ssim_std']:.4f} | {r['psnr_mean']:.2f} ± {r['psnr_std']:.2f} | {r['n_seeds']} |\n")
+                    f.write(f"| {r['model']} | {r['mae_mean']:.4f} +/- {r['mae_std']:.4f} | {r['ssim_mean']:.4f} +/- {r['ssim_std']:.4f} | {r['psnr_mean']:.2f} +/- {r['psnr_std']:.2f} | {r['n_seeds']} |\n")
         print(f"Wrote {out_path}")
 
 

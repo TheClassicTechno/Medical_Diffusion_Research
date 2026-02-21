@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
 Train FNO 3D with full spectral (Fourier) layers on Week7 data.
-Uses same loss and data as fno_3d_finetune_slice_brain.py --week7 --brain-mask.
-Saves fno_3d_spectral_week7_best.pt and fno_3d_spectral_week7_results.json.
+Uses same data/split/preprocessing as Week7/Week8: get_week7_splits(), Week7VolumePairsFNO
+(91x109x91 brain-masked, pad 96x112x96), brain-mask + optional region-weighted loss.
+Set SEED=42|123|456 for three-seed runs; run_week8_phase2_all_seeds.sh includes FNO_3D_Spectral.
+Saves fno_3d_spectral_week7_best.pt and fno_3d_spectral_week7_results.json (or phase2).
 """
 import os
 import sys
@@ -20,14 +22,14 @@ sys.path.insert(0, "/data1/julih/scripts")
 from week7_data import get_week7_splits
 from week7_preprocess import get_region_weight_mask_for_shape
 
-SEED = 1337
 EPOCHS = 40
 LR = 2e-4
 
 
 def main():
-    torch.manual_seed(SEED)
-    np.random.seed(SEED)
+    seed = int(os.environ.get("SEED", "1337"))
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     base = os.path.dirname(os.path.abspath(__file__))
 

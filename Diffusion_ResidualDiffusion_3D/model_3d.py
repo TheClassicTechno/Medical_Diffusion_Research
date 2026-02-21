@@ -340,7 +340,7 @@ def main():
         'n_timesteps': 1000,
         'residual_scale': 0.2,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
     }
     
     print(f"\nConfiguration:")

@@ -499,7 +499,7 @@ def main():
         'epochs': 100,
         'early_stop_patience': 15,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 1337,  # Same as 2D paper for fair comparison
+        'seed': int(os.environ.get('SEED', 1337)),  # Week8: use SEED env for 3-seed runs
         'n_timesteps_train': 1000,
         'n_steps_ddim': 25,
         'residual_scale': 0.5,

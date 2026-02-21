@@ -336,7 +336,7 @@ def main():
         'num_infer_steps': 25,
         'model_channels': 32,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
         'use_week7': use_week7,
     }
     

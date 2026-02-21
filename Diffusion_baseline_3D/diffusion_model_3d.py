@@ -434,7 +434,7 @@ def main():
         'early_stop_patience': 10,
         'n_timesteps': 1000,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
         'use_brain_mask': True,
         'use_simple_model': True,
         'use_augment': True,

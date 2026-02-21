@@ -403,7 +403,7 @@ def main():
         'residual_scale': 0.2,
         'schedule': 'cosine',
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
         'use_week7': use_week7,
     }
     use_phase2 = use_week7 and os.environ.get('WEEK7_REGION_WEIGHT', '').lower() in ('1', 'true', 'yes')
