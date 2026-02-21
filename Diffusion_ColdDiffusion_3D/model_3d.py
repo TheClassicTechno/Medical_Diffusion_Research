@@ -277,7 +277,7 @@ def main():
         'early_stop_patience': 10,
         'n_timesteps': 100,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
     }
     
     print(f"\nConfiguration:")
