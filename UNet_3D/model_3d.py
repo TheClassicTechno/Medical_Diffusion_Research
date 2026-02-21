@@ -348,7 +348,7 @@ def main():
         'epochs': 50,
         'early_stop_patience': 10,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'seed': 42,
+        'seed': int(os.environ.get('SEED', 42)),
         'use_2020': False,
         'split_2020_json': '/data1/julih/2020_single_delay_split.json',
         'combined_split_json': '/data1/julih/combined_subject_split.json',
