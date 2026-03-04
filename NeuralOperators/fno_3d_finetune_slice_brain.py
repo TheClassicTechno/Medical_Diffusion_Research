@@ -23,7 +23,7 @@ from fno_3d_cvr import (
     Week7VolumePairsFNO, WEEK7_PAD_SHAPE, WEEK7_ORIGINAL_SHAPE,
 )
 
-SEED = 1337
+SEED = int(os.environ.get("SEED", 1337))
 
 
 def slice_weights(edge_weight=1.5, num_slices=64):
@@ -62,7 +62,7 @@ def main():
     ap.add_argument("--slice-weight", action="store_true", help="Use slice weighting (edge slices higher)")
     ap.add_argument("--brain-mask", action="store_true", help="Restrict loss to brain voxels (pre > 0.05)")
     ap.add_argument("--edge-weight", type=float, default=1.5)
-    ap.add_argument("--epochs", type=int, default=40)
+    ap.add_argument("--epochs", type=int, default=int(os.environ.get("WEEK9_QUICK_EPOCHS", 40)))
     ap.add_argument("--out-suffix", type=str, default="")
     ap.add_argument("--loss", type=str, default="l1mse", choices=["l1mse", "psnr"])
     ap.add_argument("--width", type=int, default=64)

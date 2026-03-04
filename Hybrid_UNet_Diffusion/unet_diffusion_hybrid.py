@@ -496,7 +496,7 @@ def main():
         'target_size': (128, 128, 64),
         'batch_size': 8,  # Larger batch size due to latent space
         'lr': 5e-4,
-        'epochs': 100,
+        'epochs': int(os.environ.get('WEEK9_QUICK_EPOCHS', 100)),
         'early_stop_patience': 15,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'seed': int(os.environ.get('SEED', 1337)),  # Week8: use SEED env for 3-seed runs

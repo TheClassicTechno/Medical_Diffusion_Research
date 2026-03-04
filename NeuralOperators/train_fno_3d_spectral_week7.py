@@ -5,6 +5,7 @@ Uses same data/split/preprocessing as Week7/Week8: get_week7_splits(), Week7Volu
 (91x109x91 brain-masked, pad 96x112x96), brain-mask + optional region-weighted loss.
 Set SEED=42|123|456 for three-seed runs; run_week8_phase2_all_seeds.sh includes FNO_3D_Spectral.
 Saves fno_3d_spectral_week7_best.pt and fno_3d_spectral_week7_results.json (or phase2).
+Higher SSIM: set WEEK7_FNO_SSIM_WEIGHT=lambda (e.g. 0.5) to add lambda*(1-SSIM) to loss; 0=baseline. Compare test SSIM/MAE after one run.
 """
 import os
 import sys
@@ -22,8 +23,10 @@ sys.path.insert(0, "/data1/julih/scripts")
 from week7_data import get_week7_splits
 from week7_preprocess import get_region_weight_mask_for_shape
 
-EPOCHS = 40
+EPOCHS = int(os.environ.get("FNO_EPOCHS", "40"))
 LR = 2e-4
+# Optional: WEEK7_FNO_SSIM_WEIGHT=lambda_ssim adds lambda_ssim * (1 - SSIM) to loss; 0 = baseline (no SSIM term).
+WEEK7_FNO_SSIM_WEIGHT = float(os.environ.get("WEEK7_FNO_SSIM_WEIGHT", "0"))
 
 
 def main():
@@ -53,7 +56,11 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=2e-6)
 
-    print("Training FNO 3D spectral (Week7, brain-mask loss)...")
+    criterion_ssim = None
+    if WEEK7_FNO_SSIM_WEIGHT > 0:
+        from monai.losses import SSIMLoss
+        criterion_ssim = SSIMLoss(spatial_dims=3)
+    print("Training FNO 3D spectral (Week7, brain-mask loss)%s..." % (" + SSIM weight=%.2f" % WEEK7_FNO_SSIM_WEIGHT if WEEK7_FNO_SSIM_WEIGHT > 0 else ""))
     for epoch in range(1, EPOCHS + 1):
         model.train()
         train_loss = 0.0
@@ -64,6 +71,8 @@ def main():
                 pred, post, pre[:, :1], slice_weight_arr, use_brain_mask=True, loss_type="l1mse",
                 region_weight_vol=region_weight_t,
             )
+            if criterion_ssim is not None:
+                loss = loss + WEEK7_FNO_SSIM_WEIGHT * criterion_ssim(pred, post)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
