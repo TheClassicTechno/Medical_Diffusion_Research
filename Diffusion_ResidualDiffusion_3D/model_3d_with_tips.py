@@ -396,7 +396,7 @@ def main():
         'num_patches': 8,
         'batch_size': 2 if use_week7 else 4,  # Week7: smaller batch to avoid OOM
         'lr': 1e-4,
-        'epochs': 50,
+        'epochs': int(os.environ.get('WEEK9_QUICK_EPOCHS', 50)),
         'early_stop_patience': 10,
         'n_timesteps_train': 500,
         'n_steps_ddim': 25,

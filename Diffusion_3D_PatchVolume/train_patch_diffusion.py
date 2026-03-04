@@ -358,7 +358,7 @@ def main():
         'n_timesteps_train': 1000,
         'n_steps_ddim': 25,
         'diffusion_lr': 5e-4,
-        'diffusion_epochs': 100,
+        'diffusion_epochs': int(os.environ.get('WEEK9_QUICK_EPOCHS', 100)),
         'diffusion_early_stop': 15,
         'ema_decay': 0.9999,
     }
