@@ -345,7 +345,7 @@ def main():
         'target_size': (128, 128, 64),
         'batch_size': 2,
         'lr': 1e-3,
-        'epochs': 50,
+        'epochs': int(os.environ.get('WEEK9_QUICK_EPOCHS', 50)),
         'early_stop_patience': 10,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'seed': int(os.environ.get('SEED', 42)),
