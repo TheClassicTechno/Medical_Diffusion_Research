@@ -87,12 +87,20 @@ def mean_std(vals: list[float]) -> tuple[float, float]:
     return float(np.mean(a)), float(np.std(a))
 
 
+def ci_half(std: float, n: int, z: float = 1.96) -> float:
+    """95%% CI half-width: z * std / sqrt(n). Use for supplement reporting."""
+    if n < 2:
+        return 0.0
+    return z * std / (n ** 0.5)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Aggregate Week 8 seed results to mean +/- std")
     ap.add_argument("--results_dir", default="/data1/julih", help="Root dir to search for *_seed*.json")
     ap.add_argument("--pattern", default="*_seed*.json", help="Glob for result files")
     ap.add_argument("--output", default="", help="Output path (e.g. week8_table.md or .csv)")
     ap.add_argument("--seeds", type=str, default="42,123,456", help="Comma-separated seeds to expect (for validation)")
+    ap.add_argument("--ci", action="store_true", help="Add 95%% CI (mean +/- 1.96*std/sqrt(n)) to output for supplement")
     args = ap.parse_args()
 
     expected_seeds = [int(s.strip()) for s in args.seeds.split(",")]
@@ -119,13 +127,18 @@ def main():
         ssim_m, ssim_s = mean_std(ssim_vals)
         psnr_m, psnr_s = mean_std(psnr_vals)
         n = len(metrics_list)
-        rows.append({
+        row = {
             "model": model_name,
             "n_seeds": n,
             "mae_mean": mae_m, "mae_std": mae_s,
             "ssim_mean": ssim_m, "ssim_std": ssim_s,
             "psnr_mean": psnr_m, "psnr_std": psnr_s,
-        })
+        }
+        if args.ci and n >= 2:
+            row["mae_ci95"] = ci_half(mae_s, n)
+            row["ssim_ci95"] = ci_half(ssim_s, n)
+            row["psnr_ci95"] = ci_half(psnr_s, n)
+        rows.append(row)
 
     # Print to stdout
     print("Model\tMAE (mean+/-std)\tSSIM (mean+/-std)\tPSNR (mean+/-std)\tn_seeds")
@@ -146,6 +159,11 @@ def main():
                 f.write("|-------|------------------|-------------------|-------------------|--------|\n")
                 for r in rows:
                     f.write(f"| {r['model']} | {r['mae_mean']:.4f} +/- {r['mae_std']:.4f} | {r['ssim_mean']:.4f} +/- {r['ssim_std']:.4f} | {r['psnr_mean']:.2f} +/- {r['psnr_std']:.2f} | {r['n_seeds']} |\n")
+                if args.ci:
+                    f.write("\n95% CI half-width (1.96*std/√n) for supplement:\n")
+                    for r in rows:
+                        if r.get("mae_ci95") is not None:
+                            f.write(f"- {r['model']}: MAE ± {r['mae_ci95']:.4f}, SSIM ± {r['ssim_ci95']:.4f}, PSNR ± {r['psnr_ci95']:.2f}\n")
         print(f"Wrote {out_path}")
 
 

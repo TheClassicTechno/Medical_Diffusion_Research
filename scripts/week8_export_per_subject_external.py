@@ -276,14 +276,104 @@ def export_ddpm_3d():
     return n
 
 
+def export_fno_3d():
+    """FNO 3D (Week7): fno_3d_week7_best.pt, Week7 test pairs, per-subject JSONs."""
+    fno_dir = os.path.join(ROOT, "NeuralOperators")
+    ckpt_path = os.path.join(fno_dir, "fno_3d_week7_best.pt")
+    if not os.path.isfile(ckpt_path):
+        print("Skip FNO_3D: checkpoint not found", ckpt_path)
+        return 0
+    sys.path.insert(0, fno_dir)
+    try:
+        from fno_3d_cvr import SimpleFNO3D, Week7VolumePairsFNO
+    except Exception as e:
+        print("Skip FNO_3D:", e)
+        return 0
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+    width = ckpt["fc0.weight"].shape[0] if isinstance(ckpt, dict) else 32
+    in_ch = 4
+    modes = 12 if width == 64 else 8
+    model = SimpleFNO3D(in_ch=in_ch, out_ch=1, modes=modes, width=width)
+    model.load_state_dict(ckpt)
+    model = model.to(device)
+    model.eval()
+    _, _, test_pairs = get_week7_splits()
+    test_ds = Week7VolumePairsFNO(test_pairs)
+    n = 0
+    with torch.no_grad():
+        for i in range(len(test_pairs)):
+            pre_path, _ = test_pairs[i]
+            sid = _subject_id_from_path(pre_path)
+            pre_t, post_t = test_ds[i]
+            pre_t = pre_t.unsqueeze(0).to(device)
+            post_t = post_t.unsqueeze(0).to(device)
+            pred_t = model(pre_t)
+            pred_t = torch.clamp(pred_t, 0.0, 1.0)
+            pred_np = pred_t.cpu().numpy()
+            post_np = post_t.cpu().numpy()
+            pred_np, post_np = _crop_to_91(pred_np, post_np)
+            pred_vol = pred_np[0, 0]
+            post_vol = post_np[0, 0]
+            met = metrics_in_brain(pred_vol, post_vol, data_range=1.0)
+            pred_mean, target_mean = _brain_mean(pred_vol, post_vol)
+            out = {"model": "FNO_3D", "subject_id": sid, "mae": float(met["mae_mean"]), "ssim": float(met["ssim_mean"]), "psnr": float(met["psnr_mean"]), "pred_mean": pred_mean, "target_mean": target_mean}
+            with open(os.path.join(OUT_DIR, f"FNO_3D_{sid}.json"), "w") as f:
+                json.dump(out, f, indent=0)
+            n += 1
+    print("Wrote", n, "per-subject JSONs for FNO_3D")
+    return n
+
+
+def export_hybrid_3d():
+    """Run standalone Hybrid_3D per-subject export script."""
+    script = os.path.join(ROOT, "scripts", "week9", "week9_export_hybrid3d_per_subject.py")
+    if not os.path.isfile(script):
+        print("Skip Hybrid_3D: script not found", script)
+        return 0
+    import subprocess
+    r = subprocess.run([sys.executable, script], cwd=ROOT)
+    return 32 if r.returncode == 0 else 0
+
+
+def export_patch_3d():
+    """Run standalone Patch_3D per-subject export script if present."""
+    script = os.path.join(ROOT, "scripts", "week9", "week9_export_patch3d_per_subject.py")
+    if not os.path.isfile(script):
+        print("Skip Patch_3D: script not found", script)
+        return 0
+    import subprocess
+    r = subprocess.run([sys.executable, script], cwd=ROOT)
+    return 32 if r.returncode == 0 else 0
+
+
 def main():
     print("Exporting per-subject metrics for external models (Week 7 test set)...")
     export_unet_3d()
     export_cold_3d()
     export_residual_3d()
     export_ddpm_3d()
+    export_fno_3d()
+    export_hybrid_3d()
+    export_patch_3d()
     print("Output dir:", OUT_DIR)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    p = argparse.ArgumentParser(description="Export per-subject metrics for Week 7 test set")
+    p.add_argument("--only", type=str, default="", help="Run only this model (e.g. FNO_3D)")
+    args = p.parse_args()
+    if args.only:
+        name = args.only.strip()
+        if name == "FNO_3D":
+            export_fno_3d()
+        elif name == "Hybrid_3D":
+            export_hybrid_3d()
+        elif name == "Patch_3D":
+            export_patch_3d()
+        else:
+            print("Unknown --only model. Use FNO_3D, Hybrid_3D, or Patch_3D.")
+        print("Output dir:", OUT_DIR)
+    else:
+        main()
