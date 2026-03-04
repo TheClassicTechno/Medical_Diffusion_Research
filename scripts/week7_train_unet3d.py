@@ -16,7 +16,15 @@ from skimage.metrics import structural_similarity as ssim, peak_signal_noise_rat
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from week7_data import get_week7_splits, Week7VolumePairs3D, Week7VolumePairs3DWithMasks
-from week7_preprocess import TARGET_SHAPE, metrics_in_brain, get_brain_mask_for_shape, get_region_weight_mask_for_shape
+from week7_preprocess import (
+    TARGET_SHAPE,
+    metrics_in_brain,
+    get_brain_mask_for_shape,
+    get_region_weight_mask_for_shape,
+    load_territory_masks,
+    LOW_BASELINE_THRESHOLD_DEFAULT,
+    LOW_BASELINE_WEIGHT_DEFAULT,
+)
 
 from monai.networks.nets import UNet
 from monai.losses import SSIMLoss
@@ -75,7 +83,20 @@ def _pad_3d_mask(mask_t, target_shape):
     return mask_t
 
 
-def train_epoch(model, loader, criterion_l1, criterion_ssim, optimizer, mask_t=None):
+def train_epoch(
+    model,
+    loader,
+    criterion_l1,
+    criterion_ssim,
+    optimizer,
+    mask_t=None,
+    use_low_baseline=False,
+    low_baseline_threshold=LOW_BASELINE_THRESHOLD_DEFAULT,
+    low_baseline_weight=LOW_BASELINE_WEIGHT_DEFAULT,
+    brain_mask_t=None,
+    region_masks_t=None,
+    regional_loss_weight=0.0,
+):
     model.train()
     total = 0.0
     n = 0
@@ -89,6 +110,10 @@ def train_epoch(model, loader, criterion_l1, criterion_ssim, optimizer, mask_t=N
             pre, post = _pad_3d(pre, post, TARGET_3D_PAD)
             mask_batch = mask_t
         pre, post = pre.to(DEVICE), post.to(DEVICE)
+        if use_low_baseline and brain_mask_t is not None:
+            # Per-batch weight: down-weight voxels where pre < threshold (low baseline)
+            w = torch.where(pre < low_baseline_threshold, low_baseline_weight, 1.0).float() * brain_mask_t
+            mask_batch = w
         optimizer.zero_grad()
         out = model(pre)
         if mask_batch is not None:
@@ -96,7 +121,22 @@ def train_epoch(model, loader, criterion_l1, criterion_ssim, optimizer, mask_t=N
             loss = l1_masked + criterion_ssim(out, post)
         else:
             loss = criterion_l1(out, post) + criterion_ssim(out, post)
+        if region_masks_t is not None and regional_loss_weight > 0:
+            oh, ow, od = TARGET_SHAPE
+            pred_crop = out[:, :, :oh, :ow, :od]
+            post_crop = post[:, :, :oh, :ow, :od]
+            diff = (pred_crop - post_crop).abs()
+            # region_masks_t (1, K, 91, 109, 91), diff (B, 1, 91, 109, 91) -> (B, K, 91, 109, 91)
+            denom = region_masks_t.sum(dim=(2, 3, 4)).clamp(min=1e-8)
+            region_loss = ((diff * region_masks_t).sum(dim=(2, 3, 4)) / denom).mean()
+            loss = loss + regional_loss_weight * region_loss.mean()
         loss.backward()
+        grad_clip = os.environ.get("WEEK7_GRAD_CLIP", "").strip()
+        if grad_clip:
+            try:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=float(grad_clip))
+            except ValueError:
+                pass
         optimizer.step()
         total += loss.item()
         n += 1
@@ -145,24 +185,95 @@ def main():
     model = make_unet_3d().to(DEVICE)
     criterion_l1 = nn.L1Loss()
     criterion_ssim = SSIMLoss(spatial_dims=3)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    use_region_weight = os.environ.get("WEEK7_REGION_WEIGHT", "").lower() in ("1", "true", "yes")
+    phase2_lr = os.environ.get("WEEK7_PHASE2_LR", "").strip()
+    lr = float(phase2_lr) if (use_region_weight and phase2_lr) else LR
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     mask_t = None
+    brain_mask_t = None
+    use_low_baseline = False
+    low_baseline_weight = LOW_BASELINE_WEIGHT_DEFAULT
+    low_baseline_threshold = LOW_BASELINE_THRESHOLD_DEFAULT
+    if not use_subject_masks and os.environ.get("WEEK7_LOW_BASELINE_WEIGHT", "").strip():
+        try:
+            low_baseline_weight = float(os.environ.get("WEEK7_LOW_BASELINE_WEIGHT", str(LOW_BASELINE_WEIGHT_DEFAULT)))
+        except ValueError:
+            low_baseline_weight = LOW_BASELINE_WEIGHT_DEFAULT
+        use_low_baseline = True
+        brain_mask_np = get_brain_mask_for_shape(TARGET_3D_PAD)
+        brain_mask_t = torch.from_numpy(brain_mask_np).float().to(DEVICE).unsqueeze(0).unsqueeze(0)
+        print("Low-baseline loss weight: threshold=%.2f weight=%.2f" % (low_baseline_threshold, low_baseline_weight))
     if not use_subject_masks:
-        use_region_weight = os.environ.get("WEEK7_REGION_WEIGHT", "").lower() in ("1", "true", "yes")
-        mask_np = get_region_weight_mask_for_shape(TARGET_3D_PAD, vascular_weight=1.5) if use_region_weight else get_brain_mask_for_shape(TARGET_3D_PAD)
+        vascular_weight = 1.2 if os.environ.get("WEEK7_REGION_WEIGHT_LOW", "").lower() in ("1", "true", "yes") else 1.5
+        mask_np = get_region_weight_mask_for_shape(TARGET_3D_PAD, vascular_weight=vascular_weight) if use_region_weight else get_brain_mask_for_shape(TARGET_3D_PAD)
         mask_t = torch.from_numpy(mask_np).float().to(DEVICE).unsqueeze(0).unsqueeze(0)
+        if use_low_baseline and mask_t is not None:
+            mask_t = None  # use per-batch low-baseline weight instead
+
+    regional_loss_weight = float(os.environ.get("WEEK7_REGIONAL_LOSS_WEIGHT", "0"))
+    region_masks_t = None
+    if regional_loss_weight > 0:
+        masks_dir = os.path.join(DATA_DIR, "Masks")
+        if os.path.isdir(masks_dir):
+            territory_list = load_territory_masks(masks_dir, TARGET_SHAPE)
+            kept = [(n, m) for n, m in territory_list if m.sum() >= 10]
+            if kept:
+                stack = np.stack([m for _, m in kept], axis=0).astype(np.float32)
+                region_masks_t = torch.from_numpy(stack).float().to(DEVICE).unsqueeze(0)
+                print("Regional loss: mu=%.3f, %d territories" % (regional_loss_weight, len(kept)))
+            else:
+                regional_loss_weight = 0.0
+        else:
+            regional_loss_weight = 0.0
+
+    # Checkpoint filename: keep week7_unet3d_best.pt for Phase 1 only; variants get distinct files
+    use_region_env = os.environ.get("WEEK7_REGION_WEIGHT", "").lower() in ("1", "true", "yes")
+    use_phase2_or_3 = use_region_env or use_subject_masks
+    if use_low_baseline:
+        ckpt_name = "week7_unet3d_best_lowbaseline.pt"
+    elif use_phase2_or_3:
+        ckpt_name = "week7_unet3d_best_phase2_phase3.pt"
+    else:
+        ckpt_name = "week7_unet3d_best.pt"
 
     best_val_psnr = -1.0
+    log_val = os.environ.get("WEEK7_LOG_VAL", "").lower() in ("1", "true", "yes")
+    val_log = []  # list of {epoch, train_loss, val_mae, val_ssim, val_psnr} for Phase 2/3 stability analysis
     for ep in range(EPOCHS):
-        loss = train_epoch(model, train_loader, criterion_l1, criterion_ssim, optimizer, mask_t=mask_t)
+        loss = train_epoch(
+            model,
+            train_loader,
+            criterion_l1,
+            criterion_ssim,
+            optimizer,
+            mask_t=mask_t,
+            use_low_baseline=use_low_baseline,
+            low_baseline_threshold=low_baseline_threshold,
+            low_baseline_weight=low_baseline_weight,
+            brain_mask_t=brain_mask_t,
+            region_masks_t=region_masks_t,
+            regional_loss_weight=regional_loss_weight,
+        )
         metrics = evaluate(model, val_loader)
+        if log_val:
+            val_log.append({
+                "epoch": ep,
+                "train_loss": loss,
+                "val_mae": metrics["mae_mean"],
+                "val_ssim": metrics["ssim_mean"],
+                "val_psnr": metrics["psnr_mean"],
+            })
         if metrics["psnr_mean"] > best_val_psnr:
             best_val_psnr = metrics["psnr_mean"]
-            torch.save({"model": model.state_dict(), "epoch": ep}, os.path.join(OUT_DIR, "week7_unet3d_best.pt"))
+            torch.save({"model": model.state_dict(), "epoch": ep}, os.path.join(OUT_DIR, ckpt_name))
+            if os.environ.get("WEEK7_SAVE_SEED_CKPT", "").lower() in ("1", "true", "yes") and ckpt_name == "week7_unet3d_best.pt":
+                seed_ckpt = os.path.join(OUT_DIR, "week7_unet3d_seed%d_best.pt" % SEED)
+                torch.save({"model": model.state_dict(), "epoch": ep}, seed_ckpt)
+                print("Also saved", seed_ckpt)
         if (ep + 1) % 10 == 0:
             print(f"Epoch {ep+1} loss={loss:.4f} val MAE={metrics['mae_mean']:.4f} SSIM={metrics['ssim_mean']:.4f} PSNR={metrics['psnr_mean']:.2f}")
 
-    ckpt = torch.load(os.path.join(OUT_DIR, "week7_unet3d_best.pt"), map_location=DEVICE)
+    ckpt = torch.load(os.path.join(OUT_DIR, ckpt_name), map_location=DEVICE)
     model.load_state_dict(ckpt["model"])
     test_metrics = evaluate(model, test_loader)
     print("Test:", test_metrics)
@@ -172,6 +283,11 @@ def main():
     with open(os.path.join(OUT_DIR, out_name), "w") as f:
         json.dump(test_metrics, f, indent=2)
     print("Saved", os.path.join(OUT_DIR, out_name))
+    if log_val and val_log:
+        log_name = "week7_unet3d_phase2_phase3_val_log.json" if (use_region or use_subject) else "week7_unet3d_val_log.json"
+        with open(os.path.join(OUT_DIR, log_name), "w") as f:
+            json.dump({"epochs": val_log}, f, indent=2)
+        print("Saved val log", os.path.join(OUT_DIR, log_name))
 
 
 if __name__ == "__main__":

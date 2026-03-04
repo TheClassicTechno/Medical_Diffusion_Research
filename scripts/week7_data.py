@@ -42,6 +42,14 @@ def _random_augment() -> Tuple[bool, bool, bool, Optional[float]]:
     return flip_lr, flip_ud, flip_fb, intensity_scale
 
 
+def _random_augment_geometric_only() -> Tuple[bool, bool, bool, float]:
+    """Random flips only; intensity_scale=1.0 (no intensity change). For Tied-Augment Phase 2: second view geometric-only."""
+    flip_lr = random.random() < 0.5
+    flip_ud = random.random() < 0.5
+    flip_fb = random.random() < 0.5
+    return flip_lr, flip_ud, flip_fb, 1.0
+
+
 class Week7VolumePairs3D(Dataset):
     """3D dataset: returns (pre_vol, post_vol) as (1, H, W, D) tensors, same preprocessing and aug."""
 
@@ -202,6 +210,56 @@ class Week7VolumePairs3DWithMasks(Dataset):
         post_t = torch.from_numpy(post).unsqueeze(0).float()
         mask_t = torch.from_numpy(mask).unsqueeze(0).float()
         return pre_t, post_t, mask_t
+
+
+class Week7VolumePairs3DTiedAugment(Dataset):
+    """
+    Tied-Augment dataset: returns two independently augmented views per sample.
+    For each sample: ((pre1, post1), (pre2, post2)) where aug1 and aug2 are different.
+    Same (fl, fu, ff, scale) applied to pre and post within each view (paired).
+    Used for L = L_recon + tw * MSE(features(pre1), features(pre2)).
+    Phase 2 (WEEK89_IMPLEMENTATION_PLAN): geometric_only_second_view=True uses only flips for view2 (no intensity scaling).
+    """
+
+    def __init__(
+        self,
+        pairs: List[Tuple[str, str]],
+        augment: bool = True,
+        target_shape: Tuple[int, int, int] = TARGET_SHAPE,
+        geometric_only_second_view: bool = False,
+    ):
+        self.pairs = pairs
+        self.augment = augment
+        self.target_shape = target_shape
+        self.geometric_only_second_view = geometric_only_second_view
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, idx):
+        pre_path, post_path = self.pairs[idx]
+        pre = load_volume(pre_path, target_shape=self.target_shape)
+        post = load_volume(post_path, target_shape=self.target_shape)
+        if self.augment:
+            fl1, fu1, ff1, scale1 = _random_augment()
+            if self.geometric_only_second_view:
+                fl2, fu2, ff2, scale2 = _random_augment_geometric_only()
+            else:
+                fl2, fu2, ff2, scale2 = _random_augment()
+            pre1 = augment_volume(pre, flip_lr=fl1, flip_ud=fu1, flip_fb=ff1, intensity_scale=scale1)
+            post1 = augment_volume(post, flip_lr=fl1, flip_ud=fu1, flip_fb=ff1, intensity_scale=scale1)
+            pre2 = augment_volume(pre, flip_lr=fl2, flip_ud=fu2, flip_fb=ff2, intensity_scale=scale2)
+            post2 = augment_volume(post, flip_lr=fl2, flip_ud=fu2, flip_fb=ff2, intensity_scale=scale2)
+        else:
+            pre1 = pre.copy()
+            post1 = post.copy()
+            pre2 = pre.copy()
+            post2 = post.copy()
+        pre1_t = torch.from_numpy(pre1).unsqueeze(0).float()
+        post1_t = torch.from_numpy(post1).unsqueeze(0).float()
+        pre2_t = torch.from_numpy(pre2).unsqueeze(0).float()
+        post2_t = torch.from_numpy(post2).unsqueeze(0).float()
+        return (pre1_t, post1_t), (pre2_t, post2_t)
 
 
 def get_week7_splits():

@@ -170,6 +170,48 @@ def get_pre_post_pairs(split_key: str = "train") -> List[Tuple[str, str]]:
     return pairs
 
 
+def get_subject_center_map(split_path: Optional[str] = None) -> dict:
+    """
+    Return subject_id -> center_id for multi-center reporting.
+    Optional: if split contains subject_metadata with center_id per subject, use that.
+    Else use subject ID prefix (e.g. 2020_051 -> "2020") as proxy. Single-center if no metadata.
+    Does not change get_week7_splits or reproducibility; for reporting only.
+    """
+    path = split_path or COMBINED_SPLIT_PATH
+    if not os.path.isfile(path):
+        return {}
+    with open(path) as f:
+        data = json.load(f)
+    meta = data.get("subject_metadata") or {}
+    # All subject IDs from train/val/test subject lists if present
+    subject_ids = []
+    for key in ("train_subjects", "val_subjects", "test_subjects"):
+        subject_ids.extend(data.get(key, []))
+    if not subject_ids:
+        # Fallback: derive from train/val/test path lists
+        seen = set()
+        for key in ("train", "val", "test"):
+            for item in data.get(key, []):
+                pre = item.get("pre_path", "")
+                base = os.path.basename(pre).replace(".nii.gz", "").replace(".nii", "").strip()
+                if base.startswith("pre_"):
+                    sid = base[4:]
+                else:
+                    sid = base
+                if sid and sid not in seen:
+                    seen.add(sid)
+                    subject_ids.append(sid)
+    out = {}
+    for sid in subject_ids:
+        if isinstance(meta.get(sid), dict) and "center_id" in meta[sid]:
+            out[sid] = str(meta[sid]["center_id"])
+        elif "_" in sid:
+            out[sid] = sid.split("_")[0]
+        else:
+            out[sid] = sid or "unknown"
+    return out
+
+
 def metrics_in_brain(
     pred: np.ndarray,
     target: np.ndarray,
@@ -378,3 +420,34 @@ def get_region_weight_mask_for_shape(
         for _name, m in territory_list:
             weight[m > 0.5] = vascular_weight
         return weight.astype(dtype)
+
+
+# Low-baseline region handling (future work): down-weight voxels with low pre (or post) to avoid over-penalizing.
+# Threshold: treat voxels with pre < threshold as low-baseline. Alternative: 10th percentile per volume (not implemented).
+LOW_BASELINE_THRESHOLD_DEFAULT = 0.1
+LOW_BASELINE_WEIGHT_DEFAULT = 0.5  # weight in [0, 1] for low-baseline voxels; 1.0 = no down-weighting.
+
+
+def get_low_baseline_weight_map_np(
+    pre: np.ndarray,
+    brain_mask: Optional[np.ndarray] = None,
+    threshold: float = LOW_BASELINE_THRESHOLD_DEFAULT,
+    low_weight: float = LOW_BASELINE_WEIGHT_DEFAULT,
+) -> np.ndarray:
+    """
+    Weight map for loss: 0 outside brain; low_weight where pre < threshold (low baseline); 1 elsewhere in brain.
+    pre: (H,W,D) or (1,H,W,D). brain_mask: same shape, 1=brain 0=out. If None, uses get_brain_mask_for_shape(pre.shape).
+    Edge: whole volume above threshold -> no down-weighting (all 1 in brain).
+    """
+    if pre.ndim == 4:
+        pre = pre.squeeze(0)
+    shape = pre.shape
+    if brain_mask is None:
+        brain_mask = get_brain_mask_for_shape(shape, dtype=np.float32)
+    if brain_mask.shape != shape:
+        factors = [shape[i] / brain_mask.shape[i] for i in range(3)]
+        brain_mask = zoom(brain_mask.astype(np.float32), factors, order=0)
+        brain_mask = (brain_mask > 0.5).astype(np.float32)
+    weight = np.where(pre < threshold, low_weight, 1.0).astype(np.float32)
+    weight = weight * brain_mask
+    return weight

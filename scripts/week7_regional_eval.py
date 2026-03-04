@@ -8,8 +8,10 @@ Usage:
   python week7_regional_eval.py --pred-dir /path/to/pred_niftis --masks-dir /data1/julih/Masks --out regional_week7.json
 
   # From a trained script model (runs test set inference, then regional metrics):
-  python week7_regional_eval.py --model unet3d --checkpoint /data1/julih/scripts/week7_results/week7_unet3d_best.pt --out regional_week7_unet3d.json
-  python week7_regional_eval.py --model resnet3d --checkpoint /data1/julih/scripts/week7_results/week7_resnet3d_best.pt --out regional_week7_resnet3d.json
+  python week7_regional_eval.py --model unet3d --out regional_week7_unet3d.json
+  python week7_regional_eval.py --model resnet3d --out regional_week7_resnet3d.json
+  # For variants (low-baseline, Phase 2/3), pass --checkpoint explicitly:
+  python week7_regional_eval.py --model unet3d --checkpoint week7_results/week7_unet3d_best_lowbaseline.pt --out regional_week7_unet3d_lowbaseline.json
 """
 import os
 import sys
@@ -256,14 +258,21 @@ def main():
     ap.add_argument("--pred-dir", default="", help="Directory with post_{id}_pred.nii.gz (optional if --model given)")
     ap.add_argument("--post-dir", default=os.path.join(DATA_DIR, "post"), help="GT post NIfTIs if not in pred-dir")
     ap.add_argument("--model", default="", choices=("", "unet3d", "resnet3d"), help="Run inference with this model")
-    ap.add_argument("--checkpoint", default="", help="Path to model checkpoint (required if --model)")
+    ap.add_argument("--checkpoint", default="", help="Path to model checkpoint (optional: defaults to week7_unet3d_best.pt or week7_resnet3d_best.pt; use for variants e.g. week7_unet3d_best_lowbaseline.pt)")
     ap.add_argument("--masks-dir", default="", help="MNI territory masks (default: /data1/julih/Masks)")
     ap.add_argument("--out", default="regional_week7.json")
     args = ap.parse_args()
 
     if args.model:
+        if not args.checkpoint:
+            scripts_dir = os.path.dirname(os.path.abspath(__file__))
+            default_ckpts = {
+                "unet3d": os.path.join(scripts_dir, "week7_results", "week7_unet3d_best.pt"),
+                "resnet3d": os.path.join(scripts_dir, "week7_results", "week7_resnet3d_best.pt"),
+            }
+            args.checkpoint = default_ckpts.get(args.model, "")
         if not args.checkpoint or not os.path.isfile(args.checkpoint):
-            print("With --model you must provide --checkpoint to an existing .pt file")
+            print("With --model you must provide --checkpoint to an existing .pt file (or use default Phase 1 checkpoint)")
             sys.exit(1)
         run_from_model(args.model, args.checkpoint, args.masks_dir or None, args.out)
     elif args.pred_dir and os.path.isdir(args.pred_dir):
